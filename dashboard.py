@@ -1,23 +1,27 @@
+from quantitative_analysis import fetch_stock_data, calculate_SMA
+import pandas as pd
 import streamlit as st
-import yfinance as yf
 import plotly.express as px
 
 st.title("Investment Decision Dashboard")
 
 ticker = st.text_input("Enter Stock Ticker:", "NVDA")
 if ticker:
-    stock = yf.download(ticker, period="6mo")
-    stock.columns = stock.columns.droplevel(1)
+    stock = fetch_stock_data(ticker)
 
-    # Compute indicators
-    # stock["SMA_50"] = talib.SMA(stock["Close"], timeperiod=50)
-    # stock["SMA_200"] = talib.SMA(stock["Close"], timeperiod=200)
+    # Compute SMA and update dataframe
+    stock = calculate_SMA(stock, 50)
+    stock = calculate_SMA(stock, 200)
 
+    # Get the six_month_ago date: The first date shown on the graph
+    six_month_ago = stock.index[-1] - pd.DateOffset(months = 6)
+    six_month_ago = stock.index[stock.index > six_month_ago].min().strftime("%Y-%m-%d")
+    
     # Plot stock price
-    fig = px.line(stock, 
-                  x=stock.index, 
-                  y=['Close'], #, "SMA_50", "SMA_200"], 
-                  title=f"{ticker} Stock Price & SMAs")
+    fig = px.line(stock.loc[stock.index > six_month_ago], 
+                  x=stock.loc[stock.index > six_month_ago].index, 
+                  y=['Close', "SMA 50", "SMA 200"], 
+                  title=f"{ticker} Stock Price & SMAs (6 mo)")
     st.plotly_chart(fig)
 
     # Fetch news and summarize
