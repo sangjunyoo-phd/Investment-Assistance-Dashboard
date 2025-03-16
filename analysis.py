@@ -29,11 +29,11 @@ def get_stock_data(ticker):
     return stock
 
 # # Compute technical indicators (SMA, RSI) with pandas_ta
-# def compute_technical_indicators(stock):
-#     stock["SMA_50"] = ta.sma(stock["Close"], length=50)
-#     stock["SMA_200"] = ta.sma(stock["Close"], length=200)
-#     stock["RSI"] = ta.rsi(stock["Close"], length=14)
-#     return stock
+def compute_technical_indicators(stock):
+    stock["SMA_50"] = stock["Close"].rolling(window=50).mean()
+    stock["SMA_200"] = stock["Close"].rolling(window=200).mean()
+    stock["RSI"] = ta.rsi(stock["Close"], length=14)
+    return stock
 
 
 if __name__ == '__main__':
