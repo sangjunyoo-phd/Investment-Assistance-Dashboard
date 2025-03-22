@@ -1,8 +1,15 @@
 # Investment Assistance Dashboard
 
-This project is a Streamlit-based dashboard designed to assist with investment tracking and analysis.
+This project is an LLM tool built to assist in investment analysis and decision-making.
+It leverages a **local large language model (LLM)** to provide brief results for investment research from natural language queries.
+Implemented an **Evaluator-Optimizer Agentic Workflow** for reliable query result with small models and DuckDuckGoSearch to **fetch the up-to-date data**.
 
----
+**Warning**:  Do not use it for actual investment decisions. The responsibility for any financial decisions rests solely with the user.
+
+## Key Features:
+* **Local LLM with Ollama** for cost free privacy.
+* **Agentic Workflow** for efficient agent calls to gather data and perform analysis.
+* **Up-to-Date Data** including stock prices, market news and reports, ensuring it always work with the most recent information.
 
 ## Prerequisites
 
@@ -11,7 +18,6 @@ Before running the project, you need to install the following:
 - **[Poetry](https://python-poetry.org/docs/#installation)** for managing project dependencies.
 - **[Ollama](https://ollama.com/download)** for running the local LLM models.
 
----
 
 ## Installation
 
@@ -26,7 +32,6 @@ cd path\to\your\project\
 poetry install
 ```
 
----
 
 ## Before running the app
 
@@ -41,5 +46,3 @@ ollama pull gemma3:4b
 ```bash
 poetry run streamlit run app.py
 ```
-
----
