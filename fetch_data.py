@@ -1,47 +1,6 @@
 import yfinance as yf
-import ollama
+import numpy as np
 import pandas as pd
-from pydantic import BaseModel
-
-# Define Structured Output
-class TickerResponse(BaseModel):
-    name: str
-    ticker: str
-
-class TickerEvaluation(BaseModel):
-    they_are_same:bool
-
-def get_ticker_llm(user_query: str, 
-                   model_name: str) -> TickerResponse:
-    response = ollama.chat(
-        model = model_name,
-        messages = [
-            {
-                "role": "user",
-                "content": f"What is the company or index name and yahoo finance ticker for this company? {user_query}"
-            }
-        ],
-        format = TickerResponse.model_json_schema()
-    )
-
-    return TickerResponse.model_validate_json(response.message.content)
-
-def evaluate_ticker_llm(llm_response: TickerResponse,
-                        model_name:str) -> bool:
-    ticker, name = llm_response.ticker, llm_response.name
-    name_from_ticker = yf.Ticker(ticker).info['longName']
-
-    evaluation = ollama.chat(
-        model = model_name,
-        messages = [
-            {"role": "user",
-            "content": f"Do these two mean the same company? {name} and {name_from_ticker}"}
-        ],
-        format = TickerEvaluation.model_json_schema()
-    )
-
-    return TickerEvaluation.model_validate_json(evaluation.message.content).they_are_same
-
 
 def fetch_stock_data(ticker:str) -> pd.DataFrame:
     """
