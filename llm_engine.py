@@ -1,7 +1,8 @@
 import ollama
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import yfinance as yf
 from duckduckgo_search import DDGS
+from typing import Literal
 
 # Define Structured Output
 class TickerResponse(BaseModel):
@@ -12,6 +13,13 @@ class TickerEvaluation(BaseModel):
     ticker_exists:bool
     they_are_same:bool
     feedback: str|None
+
+class NewsAnalysisStructure(BaseModel):
+    events: list[str] = Field(..., min_length=2, max_length=4)
+    strengths: list[str] = Field(..., min_length=2, max_length=4)
+    weaknesses: list[str] = Field(..., min_length=2, max_length=4)
+    grade: Literal['Strongly Recommend', 'Recommend', 'Neutral', 'Risky', 'Highly Risky']
+    comment: str
 
 
 def get_ticker_llm(user_query: str, 
@@ -89,9 +97,10 @@ def evaluate_ticker_llm(llm_response: TickerResponse,
     except:
         # ticker is unavailable; probably hallucinate the ticker
         return TickerEvaluation(ticker_exists=False, they_are_same=False, 
-                                feedback="Ticker is not found from the yahoo finance. Correct the ticker.")
+                                feedback=f"Ticker is not found from the yahoo finance. Correct the ticker. Your response must not be the same as {ticker}")
     else:
         # When no error has encountered; ticker exists
+        print(f"Comparing {name} (LLM Guessed) and {name_from_ticker} (from Ticker)")
         evaluation = ollama.chat(
             model = model_name,
             messages = [
@@ -102,16 +111,33 @@ def evaluate_ticker_llm(llm_response: TickerResponse,
                 {
                     "role": "user",
                     "content": f"""You passed the ticker existence test. 
-                                LLM-guessed company name is {name}, LLM-guessed ticker of the company is {ticker}.
-                                The company name retrieved from the LLM guessed ticker with yahoo finance is {name_from_ticker}.
-                                They may not match extactly the same, but do they mean the same company?
-                                If they mean differenc companies, provide a brief and concise feed back on what made this wrong.
+                                LLM-guessed company name is {name} and name extracted from the ticker is {name_from_ticker}.
+                                Do they mean the same company?
                                 """
                 }],
             format = TickerEvaluation.model_json_schema()
         )
-
         return TickerEvaluation.model_validate_json(evaluation.message.content)
+    
+
+def analyze_news_llm(articles, model_name):
+    news_analysis_prompt = """
+    You are a helpful financial analyst. Your task is to read and analyze articles about a company,
+    and extract key events, strengths and weaknesses based on the article and your analysis for buy or sell decision of the company's stock or index fund's ETF.
+    Grade the stock or ETF based on your analysis and provide a very short and concise comment.
+    """
+
+    response = ollama.chat(
+        model = model_name, 
+        messages =[{
+            'role': 'system', 
+            'content': news_analysis_prompt}, 
+            {
+                'role': 'user', 
+                'content': articles
+                }], 
+        format = NewsAnalysisStructure.model_json_schema())
+    return NewsAnalysisStructure.model_validate_json(response.message.content)
     
 if __name__ == "__main__":
     # wrong_name_wrong_ticker = TickerResponse(name = 'Imaginary Company', 
@@ -134,10 +160,4 @@ if __name__ == "__main__":
     #     model_name = 'gemma3:1b')
     
     # print('Output:', evaluation_output)
-    
-    a = None
-
-    if a:
-        print('AA')
-    else:
-        print('AAA')
+    pass

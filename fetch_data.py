@@ -1,6 +1,7 @@
 import yfinance as yf
 import numpy as np
 import pandas as pd
+import plotly.express as px
 
 def fetch_stock_data(ticker:str) -> pd.DataFrame:
     """
@@ -31,3 +32,24 @@ def calculate_SMA(stock:pd.DataFrame, window:int) -> pd.DataFrame:
     SMA = stock_for_SMA["Close"].rolling(window=window).mean()
     stock[f'SMA {window}'] = SMA
     return stock
+
+def generate_figure(stock: pd.DataFrame,
+                    name: str):
+    # Compute SMA and update dataframe
+    stock = calculate_SMA(stock, 50)
+    stock = calculate_SMA(stock, 200)
+
+    # Get the six_month_ago date: The first date shown on the graph
+    six_month_ago = stock.index[-1] - pd.DateOffset(months = 6)
+    six_month_ago = stock.index[stock.index > six_month_ago].min().strftime("%Y-%m-%d")
+    
+    # Plot stock price
+    fig = px.line(stock.loc[stock.index > six_month_ago], 
+                x=stock.loc[stock.index > six_month_ago].index, 
+                y=['Close', "SMA 50", "SMA 200"], 
+                title=f"{name} Stock Price & SMAs (6 mo)")
+    fig.update_layout(
+        xaxis_title='',
+        yaxis_title='Value ($)'
+    )
+    return fig

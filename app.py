@@ -1,6 +1,4 @@
-import pandas as pd
 import streamlit as st
-import plotly.express as px
 import ollama
 import yfinance as yf
 
@@ -8,6 +6,9 @@ import fetch_data
 import fetch_news
 import llm_engine
 from llm_engine import TickerEvaluation, TickerResponse
+
+def to_checkmark(input:bool) -> str:
+    return "✅" if input else "❌"
 
 st.title("Investment Assistance")
 
@@ -24,8 +25,8 @@ USER_QUERY = st.sidebar.text_input("Search")
 
 # Initialize textboxes
 textbox_search_result = st.sidebar.text(f"Search Result\n  ")
-textbox1 = st.sidebar.text('Ticker Exists: ')
-textbox2 = st.sidebar.text('Correct Inference: ')
+textbox1 = st.sidebar.text('Ticker')
+textbox2 = st.sidebar.text('Company Name')
 textbox3 = st.sidebar.text('')
 
 if USER_QUERY:
@@ -33,60 +34,52 @@ if USER_QUERY:
     TICKER_EVALUATION = TickerEvaluation(ticker_exists=False, they_are_same=False, feedback=None)
 
     # First attempt to query the company name and ticker
-    TICKER_LLM = llm_engine.get_ticker_llm(USER_QUERY, MODEL_NAME)
+    with st.spinner("Guessing company name and ticker..."):
+        TICKER_LLM = llm_engine.get_ticker_llm(USER_QUERY, MODEL_NAME)
     ticker = TICKER_LLM.ticker
     name = TICKER_LLM.name
     textbox_search_result.text(f"Search Result\n{name} ({ticker})")
 
     # Evaluate the first attempt
-    TICKER_EVALUATION = llm_engine.evaluate_ticker_llm(TICKER_LLM, USER_QUERY, MODEL_NAME)
-    textbox1.text(f'Ticker Exists: {TICKER_EVALUATION.ticker_exists}')
-    textbox2.text(f'Correct Inference: {TICKER_EVALUATION.they_are_same}')
+    with st.spinner('Evaluating LLM response...'):
+        TICKER_EVALUATION = llm_engine.evaluate_ticker_llm(TICKER_LLM, USER_QUERY, MODEL_NAME)
+    textbox1.text(f'Ticker {to_checkmark(TICKER_EVALUATION.ticker_exists)}')
+    textbox2.text(f'Company Name {to_checkmark(TICKER_EVALUATION.they_are_same)}')
     if TICKER_EVALUATION.feedback:
         textbox3.text(TICKER_EVALUATION.feedback)
 
     while not (TICKER_EVALUATION.ticker_exists and TICKER_EVALUATION.they_are_same):
         # Another query with websearch + knowing prev answer was wrong
-        TICKER_LLM = llm_engine.correct_ticker_llm(USER_QUERY, TICKER_LLM, TICKER_EVALUATION, MODEL_NAME)
+        with st.spinner("Correcting company name and ticker..."):
+            TICKER_LLM = llm_engine.correct_ticker_llm(USER_QUERY, TICKER_LLM, TICKER_EVALUATION, MODEL_NAME)
         ticker = TICKER_LLM.ticker
         name = TICKER_LLM.ticker
         textbox_search_result.text(f"Search Result\n{name} ({ticker})")
 
-        TICKER_EVALUATION = llm_engine.evaluate_ticker_llm(TICKER_LLM, USER_QUERY, MODEL_NAME)
-        textbox1.text(f'Ticker Exists: {TICKER_EVALUATION.ticker_exists}')
-        textbox2.text(f'Correct Inference: {TICKER_EVALUATION.they_are_same}')
+        with st.spinner('Evaluating LLM response...'):
+            TICKER_EVALUATION = llm_engine.evaluate_ticker_llm(TICKER_LLM, USER_QUERY, MODEL_NAME)
+        textbox1.text(f'Ticker {to_checkmark(TICKER_EVALUATION.ticker_exists)}')
+        textbox2.text(f'Company Name {to_checkmark(TICKER_EVALUATION.they_are_same)}')
         if TICKER_EVALUATION.feedback:
             textbox3.text(TICKER_EVALUATION.feedback)
 
     if TICKER_EVALUATION.ticker_exists and TICKER_EVALUATION.they_are_same:
+        textbox3.text("")
         # When passed evaluation, update the search result with company name retrieved from the ticker
         name = yf.Ticker(ticker).info['longName']
         textbox_search_result.text(f"Search Result\n{name} ({ticker})")
         stock = fetch_data.fetch_stock_data(ticker)
 
-        # Compute SMA and update dataframe
-        stock = fetch_data.calculate_SMA(stock, 50)
-        stock = fetch_data.calculate_SMA(stock, 200)
-
-        # Get the six_month_ago date: The first date shown on the graph
-        six_month_ago = stock.index[-1] - pd.DateOffset(months = 6)
-        six_month_ago = stock.index[stock.index > six_month_ago].min().strftime("%Y-%m-%d")
-        
-        # Plot stock price
-        fig = px.line(stock.loc[stock.index > six_month_ago], 
-                    x=stock.loc[stock.index > six_month_ago].index, 
-                    y=['Close', "SMA 50", "SMA 200"], 
-                    title=f"{name} Stock Price & SMAs (6 mo)")
-        fig.update_layout(
-            xaxis_title='',
-            yaxis_title='Value ($)'
-        )
+        # Visualize Stock data
+        fig = fetch_data.generate_figure(stock, name)
         st.plotly_chart(fig)
 
         # Fetch news and summarize
-        fetch_news_result = fetch_news.fetch_financial_news(name)
-        articles = fetch_news.extract_contents(fetch_news_result)
-        llm_analysis_result = fetch_news.analyze_news_llm(articles, MODEL_NAME)
+        with st.spinner("Fetching News..."):
+            fetch_news_result = fetch_news.fetch_financial_news(name)
+            articles = fetch_news.extract_contents(fetch_news_result)
+        with st.spinner("Analyzing News..."):
+            llm_analysis_result = llm_engine.analyze_news_llm(articles, MODEL_NAME)
         
         # Parse the Analysis
         events = llm_analysis_result.events
