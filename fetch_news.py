@@ -29,7 +29,7 @@ def analyze_news_llm(articles, model_name):
     """
 
     response = ollama.chat(
-        model = 'gemma3:4b', 
+        model = model_name, 
         messages =[{
             'role': 'system', 
             'content': news_analysis_prompt}, 

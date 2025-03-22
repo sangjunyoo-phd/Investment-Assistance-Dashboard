@@ -26,34 +26,42 @@ USER_QUERY = st.sidebar.text_input("Search")
 textbox_search_result = st.sidebar.text(f"Search Result\n  ")
 textbox1 = st.sidebar.text('Ticker Exists: ')
 textbox2 = st.sidebar.text('Correct Inference: ')
+textbox3 = st.sidebar.text('')
 
 if USER_QUERY:
     # Initialize the evaluation when a new query is passed
-    TICKER_EVALUATION = TickerEvaluation(ticker_exists=False, they_are_same=False)
+    TICKER_EVALUATION = TickerEvaluation(ticker_exists=False, they_are_same=False, feedback=None)
 
     # First attempt to query the company name and ticker
     TICKER_LLM = llm_engine.get_ticker_llm(USER_QUERY, MODEL_NAME)
     ticker = TICKER_LLM.ticker
-    name = yf.Ticker(ticker).info['longName']
+    name = TICKER_LLM.name
     textbox_search_result.text(f"Search Result\n{name} ({ticker})")
 
     # Evaluate the first attempt
     TICKER_EVALUATION = llm_engine.evaluate_ticker_llm(TICKER_LLM, USER_QUERY, MODEL_NAME)
     textbox1.text(f'Ticker Exists: {TICKER_EVALUATION.ticker_exists}')
     textbox2.text(f'Correct Inference: {TICKER_EVALUATION.they_are_same}')
+    if TICKER_EVALUATION.feedback:
+        textbox3.text(TICKER_EVALUATION.feedback)
 
     while not (TICKER_EVALUATION.ticker_exists and TICKER_EVALUATION.they_are_same):
         # Another query with websearch + knowing prev answer was wrong
-        TICKER_LLM = llm_engine.search_ticker_llm(USER_QUERY, TICKER_LLM, MODEL_NAME)
+        TICKER_LLM = llm_engine.correct_ticker_llm(USER_QUERY, TICKER_LLM, TICKER_EVALUATION, MODEL_NAME)
         ticker = TICKER_LLM.ticker
-        name = yf.Ticker(ticker).info['longName']
+        name = TICKER_LLM.ticker
         textbox_search_result.text(f"Search Result\n{name} ({ticker})")
 
         TICKER_EVALUATION = llm_engine.evaluate_ticker_llm(TICKER_LLM, USER_QUERY, MODEL_NAME)
         textbox1.text(f'Ticker Exists: {TICKER_EVALUATION.ticker_exists}')
         textbox2.text(f'Correct Inference: {TICKER_EVALUATION.they_are_same}')
+        if TICKER_EVALUATION.feedback:
+            textbox3.text(TICKER_EVALUATION.feedback)
 
     if TICKER_EVALUATION.ticker_exists and TICKER_EVALUATION.they_are_same:
+        # When passed evaluation, update the search result with company name retrieved from the ticker
+        name = yf.Ticker(ticker).info['longName']
+        textbox_search_result.text(f"Search Result\n{name} ({ticker})")
         stock = fetch_data.fetch_stock_data(ticker)
 
         # Compute SMA and update dataframe
