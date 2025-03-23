@@ -15,21 +15,20 @@ Implemented an **Evaluator-Optimizer Agentic Workflow** for reliable query resul
 
 Before running the project, you need to install the following:
 
-- **[Poetry](https://python-poetry.org/docs/#installation)** for managing project dependencies.
-- **[Ollama](https://ollama.com/download)** for running the local LLM models.
+- **[Python](https://www.python.org/downloads/)**: Tested with Python version 3.13.2.
+- **[Ollama](https://ollama.com/download)** for running the local LLM models. (tested with 0.6.2 version)
 
 
 ## Installation
 
 1. **Clone the repository** to your preferred directory.
 
-2. **Install Poetry** Follow the instruction on the [Official Poetry Website](https://python-poetry.org/docs/).
+2. **Create and Activate a virtual environment** For an easier version control.
 
-3. **Install Dependencies** Use your favorate terminal to go to the project directory, install the project dependencies
+3. **Install Dependencies** pip install libraries
 
-```bash
-cd path\to\your\project\
-poetry install
+```venv
+pip install -U ollama, streamlit, yfinance, pandas, numpy, plotly, duckduckgo_search, pydantic, nbformat
 ```
 
 
@@ -42,7 +41,7 @@ poetry install
 ollama pull gemma3:4b
 ```
 
-3. **Run the app** After installation, activate the Poetry virtual environment and run the app
+3. **Run the app** After activating the virtual environment and installing dependencies, run the app through terminal.
 ```bash
 poetry run streamlit run app.py
 ```

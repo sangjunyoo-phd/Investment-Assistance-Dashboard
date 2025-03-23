@@ -18,7 +18,7 @@ class NewsAnalysisStructure(BaseModel):
     events: list[str] = Field(..., min_length=2, max_length=4)
     strengths: list[str] = Field(..., min_length=2, max_length=4)
     weaknesses: list[str] = Field(..., min_length=2, max_length=4)
-    grade: Literal['Strongly Recommend', 'Recommend', 'Neutral', 'Risky', 'Highly Risky']
+    grade: Literal['Recommend', 'Neutral', 'Risky']
     comment: str
 
 
